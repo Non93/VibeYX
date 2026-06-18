@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vibeY / NeuroX: Ultimate Production Platform</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Rajdhani', sans-serif; background-color: #030305; color: #e2e8f0; overflow-x: hidden; }
+        .cyber-title { font-family: 'Orbitron', sans-serif; text-shadow: 0 0 10px rgba(6, 182, 212, 0.5); }
+        .glass-panel { background: rgba(10, 10, 18, 0.9); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass-modal { background: rgba(5, 5, 10, 0.98); backdrop-filter: blur(25px); border: 2px solid rgba(6, 182, 212, 0.4); box-shadow: 0 0 40px rgba(6, 182, 212, 0.25); }
+    </style>
+</head>
+<body class="min-h-screen border-t-4 border-cyan-500">
+
+    <!-- GLOBAL NOTIFICATION TOAST -->
+    <div id="systemToast" class="fixed bottom-5 right-5 z-50 bg-black border-2 border-pink-500 text-pink-400 px-4 py-3 rounded-xl font-mono text-sm hidden transition-all shadow-lg">
+        <i class="fa-solid fa-terminal mr-2"></i><span id="toastMessage">SYSTEM ACTIVE</span>
+    </div>
+
+    <!-- INITIAL AUTHENTICATION MODAL (FORCE LOGIN/SIGNUP) -->
+    <div id="authModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4">
+        <div class="glass-modal w-full max-w-md rounded-2xl p-6 text-center space-y-4">
+            <h3 class="cyber-title text-xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-500">vibeY SYNC TERMINAL</h3>
+            
+            <div class="flex border-b border-gray-800 font-mono text-xs mb-2">
+                <button onclick="switchAuthTab('login')" id="tab-login" class="flex-1 py-2 text-cyan-400 border-b-2 border-cyan-500 font-bold">LOG IN</button>
+                <button onclick="switchAuthTab('signup')" id="tab-signup" class="flex-1 py-2 text-gray-500">REGISTER NEW NODE</button>
+            </div>
+
+            <div class="space-y-3 text-left font-mono text-xs">
+                <div>
+                    <label class="text-cyan-400 block mb-1">EMAIL NODE</label>
+                    <input type="email" id="authEmail" placeholder="name@domain.com" class="w-full bg-black/60 border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div id="usernameField" class="hidden">
+                    <label class="text-cyan-400 block mb-1">NODE HANDLE (USERNAME)</label>
+                    <input type="text" id="authUsername" placeholder="e.g. Non93" class="w-full bg-black/60 border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div>
+                    <label class="text-cyan-400 block mb-1">ACCESS SECURITY KEY (PASSWORD)</label>
+                    <input type="password" id="authPassword" placeholder="••••••••" class="w-full bg-black/60 border border-gray-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-cyan-500">
+                </div>
+            </div>
+            <button onclick="handleAuthSubmit()" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-mono font-bold uppercase text-xs tracking-wider rounded-xl transition-all">
+                Execute Security Handshake
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN APP STRUCTURE (HIDDEN UNTIL AUTHENTICATED) -->
+    <div id="mainApp" class="hidden">
+        <!-- NAVIGATION BAR -->
+        <nav class="glass-panel sticky top-0 z-40 border-b border-cyan-500/20 px-4 py-3">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-bolt text-cyan-400 text-xl animate-pulse"></i>
+                    <span class="cyber-title text-xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-500">vibeY / NeuroX</span>
+                </div>
+                
+                <div class="flex items-center space-x-3 text-xs font-mono">
+                    <div id="adminBadge" class="hidden bg-red-600/20 border border-red-500 text-red-400 px-2 py-1 rounded font-bold mr-2 cursor-pointer" onclick="openAdminPanel()">
+                        <i class="fa-solid fa-user-shield mr-1"></i>ADMIN ROOT
+                    </div>
+                    <div class="bg-black border border-pink-500/30 rounded-xl px-3 py-1.5 flex items-center space-x-2">
+                        <i class="fa-solid fa-star text-pink-400"></i>
+                        <span class="text-gray-400">Points:</span>
+                        <span id="navUserPoints" class="font-bold text-pink-400">0</span>
+                    </div>
+                    <div class="bg-black border border-cyan-500/30 rounded-xl px-3 py-1.5 flex items-center space-x-2">
+                        <i class="fa-solid fa-coins text-cyan-400"></i>
+                        <span class="text-gray-400">$vBY:</span>
+                        <span id="navUserCrypto" class="font-bold text-cyan-400">0.00</span>
+                    </div>
+                    <button id="walletBtn" onclick="connectRealWeb3Wallet()" class="bg-black border border-cyan-500 text-cyan-400 text-xs px-3 py-1.5 rounded uppercase font-bold hover:bg-cyan-500/10 transition-all">
+                        <i class="fa-solid fa-wallet mr-1.5"></i>Connect Wallet
+                    </button>
+                    <button onclick="logOutNode()" class="bg-gray-900 border border-gray-700 text-gray-400 px-2 py-1.5 rounded hover:text-white"><i class="fa-solid fa-power-off"></i></button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- MAIN LAYOUT -->
+        <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- LEFT NAVIGATION -->
+            <div class="lg:col-span-3 space-y-4">
+                <div class="glass-panel rounded-2xl p-4 border border-gray-800 space-y-2">
+                    <button onclick="switchMainFeed('x-feed')" id="btn-x-feed" class="w-full text-left flex items-center px-3 py-2.5 rounded-xl bg-cyan-950/40 text-cyan-400 border-l-4 border-cyan-500 font-bold transition-all">
+                        <i class="fa-solid fa-hashtag mr-2.5"></i>Social Feed Matrix
+                    </button>
+                    <button onclick="switchMainFeed('market-feed')" id="btn-market-feed" class="w-full text-left flex items-center px-3 py-2.5 rounded-xl text-gray-400 hover:text-yellow-400 transition-all">
+                        <i class="fa-solid fa-store mr-2.5"></i>Cyber Marketplace
+                    </button>
+                    <button onclick="openSwapModal()" class="w-full text-left flex items-center px-3 py-2.5 rounded-xl text-gray-400 hover:text-pink-400 transition-all">
+                        <i class="fa-solid fa-shuffle mr-2.5"></i>Swap Station ($vBY ⇄ Pts)
+                    </button>
+                    <button onclick="openWalletInfoModal()" class="w-full text-left flex items-center px-3 py-2.5 rounded-xl text-gray-400 hover:text-blue-400 transition-all">
+                        <i class="fa-solid fa-wallet mr-2.5"></i>Crypto Asset Wallet
+                    </button>
+                </div>
+
+                <!-- MERCHANT REGISTRATION BOX -->
+                <div class="glass-panel rounded-2xl p-4 border border-yellow-500/20 space-y-3">
+                    <h4 class="text-xs font-bold text-yellow-500 font-mono uppercase tracking-wider"><i class="fa-solid fa-id-card mr-1.5"></i>Merchant Status</h4>
+                    <div id="merchantStatusBox" class="text-xs font-mono text-gray-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- CENTER CORE: CONTENTS FEED & MARKETPLACE -->
+            <div class="lg:col-span-9 space-y-6">
+                <!-- VIEWPORT A: SOCIAL FEED MATRIX -->
+                <div id="viewport-x-feed" class="space-y-6">
+                    <!-- DATA INJECTOR (POST FORM) -->
+                    <div class="glass-panel rounded-2xl p-4 border border-cyan-500/30">
+                        <div class="flex space-x-3">
+                            <div id="currentLoggedUserAvatar" class="w-10 h-10 rounded-xl bg-cyan-500 text-black font-bold flex items-center justify-center font-mono">U</div>
+                            <div class="flex-1 space-y-3">
+                                <textarea id="postText" rows="2" class="w-full bg-black border border-gray-800 rounded-xl p-3 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 font-mono" placeholder="Inject real data payload into the grid... (Pictures or Video Files)"></textarea>
+                                
+                                <div class="flex flex-wrap items-center gap-2 border-t border-gray-900 pt-2.5">
+                                    <label class="cursor-pointer bg-gray-900 border border-gray-800 hover:border-cyan-500 px-3 py-1.5 rounded-xl flex items-center space-x-2 text-xs font-mono text-gray-400 transition-all">
+                                        <i class="fa-solid fa-image text-cyan-400"></i>
+                                        <span>Load Media File</span>
+                                        <input type="file" id="postMediaFile" accept="image/*,video/*" class="hidden" onchange="handleMediaSelected()">
+                                    </label>
+                                    <span id="selectedMediaName" class="text-xs text-pink-400 font-mono max-w-[200px] truncate"></span>
+                                </div>
+
+                                <div class="flex justify-between items-center">
+                                    <div class="text-xs text-gray-500 font-mono"><i class="fa-solid fa-circle-info mr-1"></i>Cost to Like your post: <span class="text-pink-400">1 Point</span></div>
+                                    <button onclick="submitNewPost()" class="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold font-mono text-xs px-5 py-2 rounded-xl uppercase tracking-wider">Broadcast Node</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SOCIAL STREAM FEED CONTAINER -->
+                    <div id="streamFeedBox" class="space-y-4"></div>
+                </div>
+
+                <!-- VIEWPORT B: CYBER MARKETPLACE -->
+                <div id="viewport-market-feed" class="space-y-6 hidden">
+                    <div class="flex justify-between items-center">
+                        <h3 class="cyber-title font-bold text-lg text-yellow-500 tracking-wider">DECENTRALIZED P2P MARKETPLACE</h3>
+                        <button id="addNewProductBtn" onclick="openCreateListingModal()" class="hidden bg-yellow-500 text-black font-bold font-mono text-xs px-3 py-1.5 rounded-xl uppercase"><i class="fa-solid fa-plus mr-1"></i>Create New Listing</button>
+                    </div>
+
+                    <!-- PRODUCTS GRID -->
+                    <div id="marketProductsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ================================= MODALS MATRIX ================================= -->
+    <!-- MODAL 1: LIQUID SWAP PORT -->
+    <div id="swapModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm hidden p-4">
+        <div class="glass-modal w-full max-w-md rounded-2xl p-6 relative font-mono text-xs space-y-4">
+            <button onclick="closeModal('swapModal')" class="absolute top-4 right-4 text-gray-500 hover:text-cyan-400"><i class="fa-solid fa-xmark text-sm"></i></button>
+            <h3 class="cyber-title text-center text-sm font-bold text-pink-400 uppercase tracking-widest"><i class="fa-solid fa-shuffle mr-1.5"></i>Liquidity Swap Interface</h3>
+            
+            <div class="bg-black/60 border border-gray-800 rounded-xl p-3 space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Direction Mode:</span>
+                    <select id="swapDirection" class="bg-gray-900 border border-gray-700 text-cyan-400 font-bold p-1 rounded focus:outline-none" onchange="updateSwapCalculation()">
+                        <option value="ptsToVby">Points ➔ $vBY Token</option>
+                        <option value="vbyToPts">$vBY Token ➔ Points</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-gray-500 block mb-1">INPUT AMOUNT</label>
+                    <input type="number" id="swapInputAmt" placeholder="0.00" class="w-full bg-black border border-gray-800 rounded-xl p-2.5 text-white font-bold focus:outline-none focus:border-cyan-500" oninput="updateSwapCalculation()">
+                </div>
+                <div class="border-t border-gray-900 pt-2 text-[11px] text-gray-400 space-y-1">
+                    <div class="flex justify-between"><span>Ecosystem Fee Rate:</span><span id="swapFeeDisplay" class="text-red-400">0%</span></div>
+                    <div class="flex justify-between"><span>Net Output Expected:</span><span id="swapOutputDisplay" class="text-green-400 font-bold">0.00</span></div>
+                </div>
+            </div>
+            <button onclick="executeEcosystemSwap()" class="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 font-bold text-white uppercase rounded-xl">Commit Swap Transmission</button>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CRYPTO ASSET WALLET INFO -->
+    <div id="walletInfoModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm hidden p-4">
+        <div class="glass-modal w-full max-w-md rounded-2xl p-6 relative font-mono text-xs space-y-4">
+            <button onclick="closeModal('walletInfoModal')" class="absolute top-4 right-4 text-gray-500 hover:text-cyan-400"><i class="fa-solid fa-xmark text-sm"></i></button>
+            <h3 class="cyber-title text-center text-sm font-bold text-blue-400 uppercase tracking-widest"><i class="fa-solid fa-wallet mr-1.5"></i>CRYPTO ASSETS WALLET (TOP 5 + LOCAL)</h3>
+            <div id="walletAddressDisplay" class="text-[10px] text-center text-gray-500 border border-gray-900 p-1.5 rounded break-all bg-black">Wallet Disconnected</div>
+            
+            <div class="space-y-2" id="walletAssetsList"></div>
+            <p class="text-[10px] text-gray-500 text-center italic">Connect your External Web3 extension to dynamically inject real-time blockchain telemetry details.</p>
+        </div>
+    </div>
+
+    <!-- MODAL 3: MARKET LISTING CREATOR -->
+    <div id="createListingModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm hidden p-4">
+        <div class="glass-modal w-full max-w-md rounded-2xl p-6 relative font-mono text-xs space-y-4">
+            <button onclick="closeModal('createListingModal')" class="absolute top-4 right-4 text-gray-500 hover:text-cyan-400"><i class="fa-solid fa-xmark text-sm"></i></button>
+            <h3 class="cyber-title text-sm font-bold text-yellow-500 uppercase"><i class="fa-solid fa-store mr-1.5"></i>Launch Merchant Listing</h3>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="text-gray-500 block mb-1">Asset Asset Type</label>
+                    <select id="marketAssetType" class="w-full bg-black border border-gray-800 rounded-xl p-2.5 text-white">
+                        <option value="Points">System Points Package</option>
+                        <option value="$vBY">$vBY Crypto Token Bundle</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-gray-500 block mb-1">Quantity / Volume</label>
+                    <input type="number" id="marketAssetQty" placeholder="e.g. 100" class="w-full bg-black border border-gray-800 rounded-xl p-2.5 text-white">
+                </div>
+                <div>
+                    <label class="text-gray-500 block mb-1">Total Valuation Price (THB)</label>
+                    <input type="number" id="marketAssetPrice" placeholder="e.g. 350" class="w-full bg-black border border-gray-800 rounded-xl p-2.5 text-white">
+                </div>
+            </div>
+            <button onclick="submitMerchantListing()" class="w-full py-3 bg-yellow-500 text-black font-bold uppercase rounded-xl">Inject Store Item</button>
+        </div>
+    </div>
+
+    <!-- MODAL 4: CRITICAL ROOT ADMIN PANEL -->
+    <div id="adminPanelModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md hidden p-4">
+        <div class="glass-modal w-full max-w-lg rounded-2xl p-6 relative font-mono text-xs space-y-4 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+            <button onclick="closeModal('adminPanelModal')" class="absolute top-4 right-4 text-gray-500 hover:text-red-400"><i class="fa-solid fa-xmark text-sm"></i></button>
+            <h3 class="cyber-title text-sm font-bold text-red-500 uppercase tracking-widest"><i class="fa-solid fa-user-shield mr-1.5"></i>Root Operations Console (Secure Node)</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- BOX A: SECURITY PRE-EMPTION -->
+                <div class="bg-red-950/10 border border-red-500/30 rounded-xl p-3 space-y-3">
+                    <span class="text-red-400 font-bold block border-b border-red-500/20 pb-1 uppercase"><i class="fa-solid fa-key mr-1"></i>Rotate Root Credentials</span>
+                    <div>
+                        <label class="text-gray-500 block mb-0.5">NEW ACCESS PASSPHRASE</label>
+                        <input type="password" id="newAdminPass" placeholder="Enter secure key" class="w-full bg-black border border-gray-800 rounded-lg p-2 text-white focus:outline-none focus:border-red-500">
+                    </div>
+                    <button onclick="commitAdminPasswordChange()" class="w-full py-2 bg-red-600 text-black font-bold uppercase text-[11px] rounded-lg">Apply Anti-Hack Patch</button>
+                </div>
+
+                <!-- BOX B: ECOSYSTEM CONFIGURATOR -->
+                <div class="bg-black/60 border border-gray-800 rounded-xl p-3 space-y-3">
+                    <span class="text-cyan-400 font-bold block border-b border-cyan-500/20 pb-1 uppercase"><i class="fa-solid fa-sliders mr-1"></i>Variables Control</span>
+                    <div>
+                        <label class="text-gray-500 block mb-1">GLOBAL FEE RATE: <span id="adminFeePctDisplay" class="text-cyan-400 font-bold">0%</span></label>
+                        <input type="range" id="adminFeeSlider" min="1" max="50" value="5" class="w-full accent-cyan-500" oninput="updateAdminFeeConfig(this.value)">
+                    </div>
+                    <div class="text-[10px] text-gray-500">Affects transaction outputs across Swaps and Wallet Trades instantly.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================= FULL-STACK DATABASE LOGIC MATRIX ================================= -->
+    <script>
+        // CORE DB ENGINE LAYER
+        const DB = {
+            getUsers: () => JSON.parse(localStorage.getItem('vby_users')) || {},
+            saveUsers: (users) => localStorage.setItem('vby_users', JSON.stringify(users)),
+            getPosts: () => JSON.parse(localStorage.getItem('vby_posts')) || [],
+            savePosts: (posts) => localStorage.setItem('vby_posts', JSON.stringify(posts)),
+            getProducts: () => JSON.parse(localStorage.getItem('vby_products')) || [],
+            saveProducts: (products) => localStorage.setItem('vby_products', JSON.stringify(products)),
+            getSystemConfig: () => JSON.parse(localStorage.getItem('vby_config')) || { feePct: 10, adminPass: "Rtgadk_02" },
+            saveSystemConfig: (cfg) => localStorage.setItem('vby_config', JSON.stringify(cfg))
+        };
+
+        // RUNTIME STATE CONTEXT
+        let currentAuthTab = 'login';
+        let activeUserEmail = null;
+        let selectedPostMediaBase64 = null;
+
+        // INITIAL PLATFORM SEED DATA
+        function seedInitialDatabase() {
+            const config = DB.getSystemConfig();
+            const products = DB.getProducts();
+            
+            // Seed Root Admin Account if not existing
+            const users = DB.getUsers();
+            if(!users['anksw02@gmail.com']) {
+                users['anksw02@gmail.com'] = { email: "anksw02@gmail.com", username: "RootAdmin", points: 99999, crypto: 10000.00, isMerchant: true };
+                DB.saveUsers(users);
+            }
+
+            // Seed Master Admin Store Listing
+            if(products.length === 0) {
+                const initialStore = [
+                    { id: "p1", sellerEmail: "anksw02@gmail.com", sellerName: "Admin Store", type: "Points", qty: 100, price: 50 },
+                    { id: "p2", sellerEmail: "anksw02@gmail.com", sellerName: "Admin Store", type: "$vBY", qty: 50, price: 150 }
+                ];
+                DB.saveProducts(initialStore);
+            }
+        }
+
+        // ENTRY ACCESS GATE (HANDSHAKE CONTROL)
+        function switchAuthTab(tab) {
+            currentAuthTab = tab;
+            document.getElementById('tab-login').className = tab === 'login' ? 'flex-1 py-2 text-cyan-400 border-b-2 border-cyan-500 font-bold' : 'flex-1 py-2 text-gray-500';
+            document.getElementById('tab-signup').className = tab === 'signup' ? 'flex-1 py-2 text-cyan-400 border-b-2 border-cyan-500 font-bold' : 'flex-1 py-2 text-gray-500';
+            document.getElementById('usernameField').className = tab === 'signup' ? 'block' : 'hidden';
+        }
+
+        function handleAuthSubmit() {
+            const email = document.getElementById('authEmail').value.trim().toLowerCase();
+            const password = document.getElementById('authPassword').value;
+            const username = document.getElementById('authUsername').value.trim();
+            const cfg = DB.getSystemConfig();
+            const users = DB.getUsers();
+
+            if(!email || !password) { alert("Missing credentials payload."); return; }
+
+            if(currentAuthTab === 'login') {
+                // Admin Access Override Logic
+                if(email === "anksw02@gmail.com") {
+                    if(password === cfg.adminPass) {
+                        activeUserEmail = email;
+                        bootApplicationWorkspace();
+                        return;
+                    } else { alert("Root credentials rejection."); return; }
+                }
+                // Regular Node Verification
+                if(users[email]) {
+                    activeUserEmail = email;
+                    bootApplicationWorkspace();
+                } else { alert("Target node handle missing. Register profile."); }
+            } else {
+                // Signup Implementation
+                if(!username) { alert("Handle field required for cryptographic reference."); return; }
+                if(email === "anksw02@gmail.com") { alert("Reserved system address space."); return; }
+                if(users[email]) { alert("Node identity intersection—email already active."); return; }
+
+                // Injecting production user profile + 10 Sign-on free credits
+                users[email] = { email: email, username: username, points: 10, crypto: 0.00, isMerchant: false };
+                DB.saveUsers(users);
+                activeUserEmail = email;
+                bootApplicationWorkspace();
+            }
+        }
+
+        // INTERFACE WORKSPACE CONTROLLER
+        function bootApplicationWorkspace() {
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            
+            const user = DB.getUsers()[activeUserEmail];
+            if(activeUserEmail === "anksw02@gmail.com") {
+                document.getElementById('adminBadge').classList.remove('hidden');
+            } else {
+                document.getElementById('adminBadge').classList.add('hidden');
+            }
+
+            document.getElementById('currentLoggedUserAvatar').innerText = user.username.substring(0,2).toUpperCase();
+            triggerToast(`NODE SYNCED: Welcome back @${user.username}`);
+            refreshCoreVisualEngine();
+        }
+
+        function logOutNode() {
+            activeUserEmail = null;
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('authModal').classList.remove('hidden');
+        }
+
+        function refreshCoreVisualEngine() {
+            if(!activeUserEmail) return;
+            const user = DB.getUsers()[activeUserEmail];
+            const cfg = DB.getSystemConfig();
+
+            // Nav Bar metrics update
+            document.getElementById('navUserPoints').innerText = user.points.toLocaleString();
+            document.getElementById('navUserCrypto').innerText = user.crypto.toFixed(2);
+
+            // Merchant Status UI segment
+            const mBox = document.getElementById('merchantStatusBox');
+            if(user.isMerchant) {
+                mBox.innerHTML = `<span class="text-green-400 font-bold"><i class="fa-solid fa-circle-check"></i> Authorized Vendor</span>`;
+                document.getElementById('addNewProductBtn').classList.remove('hidden');
+            } else {
+                mBox.innerHTML = `<p class="mb-2">Sell Assets & Tokens on the open grid.</p>
+                                  <button onclick="applyForMerchantPrivilege()" class="bg-yellow-500/10 border border-yellow-500/40 text-yellow-500 w-full py-1 rounded hover:bg-yellow-500/20">Authorize Node Store</button>`;
+                document.getElementById('addNewProductBtn').classList.add('hidden');
+            }
+
+            renderSocialFeeds();
+            renderMarketplaceGrid();
+        }
+
+        // ATTACH REAL MEMORY PICTURES/VIDEOS UTILITY
+        function handleMediaSelected() {
+            const file = document.getElementById('postMediaFile').files[0];
+            const label = document.getElementById('selectedMediaName');
+            if(!file) return;
+
+            label.innerText = file.name;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                selectedPostMediaBase64 = { data: e.target.result, type: file.type.startsWith('video') ? 'video' : 'image' };
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // SOCIAL NETWORKING PROTOCOLS (WRITE & INTERACTION DEBIT POOLS)
+        function submitNewPost() {
+            const txt = document.getElementById('postText').value.trim();
+            if(!txt && !selectedPostMediaBase64) return;
+
+            const user = DB.getUsers()[activeUserEmail];
+            const posts = DB.getPosts();
+
+            const newPostObj = {
+                id: "post_" + Date.now(),
+                authorEmail: activeUserEmail,
+                authorName: user.username,
+                content: txt,
+                media: selectedPostMediaBase64,
+                likes: 0,
+                timestamp: new Date().toLocaleTimeString()
+            };
+
+            posts.unshift(newPostObj);
+            DB.savePosts(posts);
+
+            // Clear inputs
+            document.getElementById('postText').value = '';
+            document.getElementById('postMediaFile').value = '';
+            document.getElementById('selectedMediaName').innerText = '';
+            selectedPostMediaBase64 = null;
+
+            triggerToast("BROADCAST COMPLETED");
+            refreshCoreVisualEngine();
+        }
+
+        function renderSocialFeeds() {
+            const posts = DB.getPosts();
+            const feedBox = document.getElementById('streamFeedBox');
+            feedBox.innerHTML = '';
+
+            if(posts.length === 0) {
+                feedBox.innerHTML = `<div class="glass-panel rounded-2xl p-6 text-center text-gray-500 font-mono text-xs">No signals found on the wire. Start broadcasting contents.</div>`;
+                return;
+            }
+
+            posts.forEach(p => {
+                let mediaElement = '';
+                if(p.media) {
+                    if(p.media.type === 'video') {
+                        mediaElement = `<div class="rounded-xl overflow-hidden bg-black border border-gray-900 max-h-80 flex items-center justify-center">
+                                            <video src="${p.media.data}" controls class="w-full max-h-80 object-contain"></video>
+                                        </div>`;
+                    } else {
+                        mediaElement = `<div class="rounded-xl overflow-hidden bg-black border border-gray-900 max-h-80 flex items-center justify-center">
+                                            <img src="${p.media.data}" class="w-full max-h-80 object-contain">
+                                        </div>`;
+                    }
+                }
+
+                const postCard = `
+                    <div class="glass-panel rounded-2xl p-5 border border-gray-900 space-y-4 font-mono text-xs">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-500/30 text-cyan-400 font-bold flex items-center justify-center uppercase">${p.authorName.substring(0,2)}</div>
+                                <div>
+                                    <h4 class="font-bold text-cyan-400">@${p.authorName}</h4>
+                                    <p class="text-[9px] text-gray-500">Time sync: ${p.timestamp}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-gray-300 text-sm whitespace-pre-wrap">${p.content}</p>
+                        ${mediaElement}
+                        <div class="pt-3 border-t border-gray-950 flex items-center">
+                            <button onclick="executeLikeTransaction('${p.id}')" class="bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 text-pink-400 px-4 py-1.5 rounded-xl font-bold flex items-center space-x-2 transition-all">
+                                <i class="fa-solid fa-heart"></i>
+                                <span>Like Product (${p.likes})</span>
+                            </button>
+                        </div>
+                    </div>`;
+                feedBox.innerHTML += postCard;
+            });
+        }
+
+        // TRANSACTION ENGINE FOR THE LIKE VALUE PROPAGATION
+        function executeLikeTransaction(postId) {
+            const users = DB.getUsers();
+            const posts = DB.getPosts();
+            
+            const currentUser = users[activeUserEmail];
+            const targetPost = posts.find(x => x.id === postId);
+
+            if(!targetPost) return;
+            if(targetPost.authorEmail === activeUserEmail) { alert("Self pollination denied. Cannot like own node."); return; }
+            
+            // Check Debit Availability
+            if(currentUser.points < 1) { 
+                alert("Zero balance threshold reached! Construct more posts to claim inbound metrics, or navigate marketplace for point refills."); 
+                return; 
+            }
+
+            // Execute Value Transmission Loop
+            currentUser.points -= 1;
+            targetPost.likes += 1;
+            
+            // Target recipient routing safety check
+            if(users[targetPost.authorEmail]) {
+                users[targetPost.authorEmail].points += 1;
+            }
+
+            DB.saveUsers(users);
+            DB.savePosts(posts);
+            triggerToast("POINT TRANSMITTED VALUE INJECTED");
+            refreshCoreVisualEngine();
+        }
+
+        // LIQUID SWAP MATHEMATICAL INTERFACE
+        function updateSwapCalculation() {
+            const dir = document.getElementById('swapDirection').value;
+            const input = parseFloat(document.getElementById('swapInputAmt').value) || 0;
+            const cfg = DB.getSystemConfig();
+            
+            document.getElementById('swapFeeDisplay').innerText = `${cfg.feePct}%`;
+            
+            let output = 0;
+            if(dir === 'ptsToVby') {
+                output = input * (1 - cfg.feePct / 100);
+            } else {
+                output = input * (1 - cfg.feePct / 100);
+            }
+            document.getElementById('swapOutputDisplay').innerText = output.toFixed(2);
+        }
+
+        function executeEcosystemSwap() {
+            const dir = document.getElementById('swapDirection').value;
+            const input = parseFloat(document.getElementById('swapInputAmt').value) || 0;
+            if(input <= 0) { alert("Invalid numerical parameter."); return; }
+
+            const users = DB.getUsers();
+            const user = users[activeUserEmail];
+            const cfg = DB.getSystemConfig();
+            const netOutput = input * (1 - cfg.feePct / 100);
+
+            if(dir === 'ptsToVby') {
+                if(user.points < input) { alert("Insufficient internal points."); return; }
+                user.points -= input;
+                user.crypto += netOutput;
+            } else {
+                if(user.crypto < input) { alert("Insufficient $vBY balances."); return; }
+                user.crypto -= input;
+                user.points += netOutput;
+            }
+
+            DB.saveUsers(users);
+            closeModal('swapModal');
+            triggerToast("LIQUID CONVERSION EXECUTED");
+            refreshCoreVisualEngine();
+        }
+
+        // P2P DECENTRALIZED VENDOR ECONOMY
+        function applyForMerchantPrivilege() {
+            const users = DB.getUsers();
+            users[activeUserEmail].isMerchant = true;
+            DB.saveUsers(users);
+            triggerToast("MERCHANT CLEARANCE GRANTED");
+            refreshCoreVisualEngine();
+        }
+
+        function renderMarketplaceGrid() {
+            const products = DB.getProducts();
+            const grid = document.getElementById('marketProductsGrid');
+            grid.innerHTML = '';
+
+            products.forEach(p => {
+                const isOwner = p.sellerEmail === activeUserEmail;
+                const card = `
+                    <div class="glass-panel rounded-2xl p-4 border border-gray-800 font-mono text-xs flex flex-col justify-between space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase">${p.type} ASSET</span>
+                                <h4 class="text-sm font-bold text-white mt-1.5">${p.qty} ${p.type} Bundle</h4>
+                                <p class="text-[10px] text-gray-500 mt-0.5">Vendor: @${p.sellerName}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-400">Fixed Cost</p>
+                                <p class="text-base font-bold text-yellow-500">${p.price} THB</p>
+                            </div>
+                        </div>
+                        <div>
+                            ${isOwner ? 
+                            `<button class="w-full py-2 bg-gray-900 text-gray-500 rounded-xl font-bold cursor-not-allowed uppercase" disabled>Own Node Listing</button>` :
+                            `<button onclick="buyMarketItem('${p.id}')" class="w-full py-2 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-xl font-bold uppercase hover:opacity-90 transition-all">Acquire Asset Package</button>`}
+                        </div>
+                    </div>`;
+                grid.innerHTML += card;
+            });
+        }
+
+        function buyMarketItem(productId) {
+            const products = DB.getProducts();
+            const users = DB.getUsers();
+            
+            const itemIndex = products.findIndex(x => x.id === productId);
+            if(itemIndex === -1) return;
+
+            const targetItem = products[itemIndex];
+            const buyer = users[activeUserEmail];
+            const seller = users[targetItem.sellerEmail];
+
+            // Processing Internal Allocations Transfer
+            if(targetItem.type === 'Points') {
+                buyer.points += targetItem.qty;
+            } else {
+                buyer.crypto += targetItem.qty;
+            }
+
+            // If seller profile is registered on-chain, adjust balancing
+            if(seller && targetItem.sellerEmail !== "anksw02@gmail.com") {
+                if(targetItem.type === 'Points') seller.points -= targetItem.qty;
+                else seller.crypto -= targetItem.qty;
+            }
+
+            // Splice item out of database grid if not admin persistent store
+            if(targetItem.sellerEmail !== "anksw02@gmail.com") {
+                products.splice(itemIndex, 1);
+                DB.saveProducts(products);
+            }
+
+            DB.saveUsers(users);
+            triggerToast("ASSET LIQUIDATION SUCCESS");
+            refreshCoreVisualEngine();
+        }
+
+        function submitMerchantListing() {
+            const type = document.getElementById('marketAssetType').value;
+            const qty = parseInt(document.getElementById('marketAssetQty').value) || 0;
+            const price = parseFloat(document.getElementById('marketAssetPrice').value) || 0;
+
+            if(qty <= 0 || price <= 0) { alert("Invalid listings specification values."); return; }
+
+            const users = DB.getUsers();
+            const user = users[activeUserEmail];
+
+            // Inventory assurance barrier check
+            if(type === 'Points' && user.points < qty) { alert("Insufficient points to back this listing store."); return; }
+            if(type === '$vBY' && user.crypto < qty) { alert("Insufficient crypto balances to supply item."); return; }
+
+            const products = DB.getProducts();
+            products.push({
+                id: "prod_" + Date.now(),
+                sellerEmail: activeUserEmail,
+                sellerName: user.username,
+                type: type,
+                qty: qty,
+                price: price
+            });
+
+            DB.saveProducts(products);
+            closeModal('createListingModal');
+            triggerToast("PRODUCT INJECTED IN MARKET");
+            refreshCoreVisualEngine();
+        }
+
+        // WEB3 LIVE OVER-THE-AIR CONNECTIVITY INTERFACE
+        async function connectRealWeb3Wallet() {
+            const btn = document.getElementById('walletBtn');
+            if (window.ethereum) {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    if(accounts.length > 0) {
+                        const addr = accounts[0];
+                        btn.className = "bg-cyan-500 text-black font-mono text-xs px-3 py-1.5 rounded uppercase font-bold";
+                        btn.innerHTML = `<i class="fa-solid fa-fingerprint mr-1"></i>${addr.substring(0,6)}...${addr.substring(addr.length - 4)}`;
+                        document.getElementById('walletAddressDisplay').innerText = `CONNECTED ETH DATA NODE: ${addr}`;
+                        triggerToast("WEB3 HANDSHAKE COMPLETE");
+                    }
+                } catch (err) {
+                    alert("User rejected the secure provider linkage.");
+                }
+            } else {
+                alert("Cryptographic provider Web3 engine (MetaMask extension) not detected on local hardware client. Defaulting to simulated provider environment.");
+                btn.innerHTML = "CONNECTED SIMULA";
+                document.getElementById('walletAddressDisplay').innerText = "VIRTUAL HARDWARE ADDR: 0x71C...93vBY";
+            }
+        }
+
+        function openWalletInfoModal() {
+            const modal = document.getElementById('walletInfoModal');
+            const list = document.getElementById('walletAssetsList');
+            const user = DB.getUsers()[activeUserEmail] || { crypto: 0 };
+            
+            const tokens = [
+                { name: "Bitcoin (BTC)", val: "0.042 BTC" },
+                { name: "Ethereum (ETH)", val: "1.24 ETH" },
+                { name: "Binance Coin (BNB)", val: "3.50 BNB" },
+                { name: "Tether USD (USDT)", val: "500.00 USDT" },
+                { name: "Solana (SOL)", val: "12.80 SOL" },
+                { name: "vibeY Token ($vBY)", val: `${user.crypto.toFixed(2)} $vBY` }
+            ];
+
+            list.innerHTML = '';
+            tokens.forEach(t => {
+                list.innerHTML += `<div class="flex justify-between items-center bg-black/40 p-2 border border-gray-900 rounded-lg">
+                                    <span class="text-gray-400 font-bold">${t.name}</span>
+                                    <span class="text-cyan-400 font-bold">${t.val}</span>
+                                   </div>`;
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        // ROOT CONTROL INFRASTRUCTURE ACTIONS
+        function commitAdminPasswordChange() {
+            const newPass = document.getElementById('newAdminPass').value;
+            if(newPass.length < 4) { alert("Passphrase payload density too weak."); return; }
+            
+            const cfg = DB.getSystemConfig();
+            cfg.adminPass = newPass;
+            DB.saveSystemConfig(cfg);
+            
+            document.getElementById('newAdminPass').value = '';
+            triggerToast("ROOT ACCESS PHRASE UPDATED PROTECTED");
+            closeModal('adminPanelModal');
+        }
+
+        function updateAdminFeeConfig(val) {
+            const cfg = DB.getSystemConfig();
+            cfg.feePct = parseInt(val);
+            DB.saveSystemConfig(cfg);
+            document.getElementById('adminFeePctDisplay').innerText = val + '%';
+        }
+
+        // GENERAL PRESENTATION UTILS
+        function switchMainFeed(view) {
+            document.getElementById('viewport-x-feed').className = view === 'x-feed' ? 'space-y-6' : 'hidden';
+            document.getElementById('viewport-market-feed').className = view === 'market-feed' ? 'space-y-6' : 'hidden';
+            
+            document.getElementById('btn-x-feed').className = view === 'x-feed' ? "w-full text-left flex items-center px-3 py-2.5 rounded-xl bg-cyan-950/40 text-cyan-400 border-l-4 border-cyan-500 font-bold transition-all" : "w-full text-left flex items-center px-3 py-2.5 rounded-xl text-gray-400 hover:text-cyan-400 transition-all";
+            document.getElementById('btn-market-feed').className = view === 'market-feed' ? "w-full text-left flex items-center px-3 py-2.5 rounded-xl bg-yellow-950/40 text-yellow-400 border-l-4 border-yellow-500 font-bold transition-all" : "w-full text-left flex items-center px-3 py-2.5 rounded-xl text-gray-400 hover:text-yellow-400 transition-all";
+        }
+
+        function openAdminPanel() { 
+            const cfg = DB.getSystemConfig();
+            document.getElementById('adminFeePctDisplay').innerText = cfg.feePct + '%';
+            document.getElementById('adminFeeSlider').value = cfg.feePct;
+            document.getElementById('adminPanelModal').classList.remove('hidden'); 
+        }
+        function openSwapModal() { updateSwapCalculation(); document.getElementById('swapModal').classList.remove('hidden'); }
+        function openCreateListingModal() { document.getElementById('createListingModal').classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        // CORE RUNTIME INITIALIZER
+        window.onload = () => {
+            seedInitialDatabase();
+        };
+    </script>
+</body>
+</html>
